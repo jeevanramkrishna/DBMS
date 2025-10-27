@@ -1,0 +1,1122 @@
+
+-- Hostipal database!!
+CREATE DATABASE HospitalDB;
+USE HospitalDB;
+
+-- Doctor Table
+CREATE TABLE Doctor (
+    DoctorID INT PRIMARY KEY,
+    Name VARCHAR(100),
+    Specialization VARCHAR(100),
+    Phone VARCHAR(15)
+);
+
+-- Patient Table
+CREATE TABLE Patient (
+    PatientID INT PRIMARY KEY,
+    Name VARCHAR(100),
+    Age INT,
+    Gender CHAR(1),
+    Address VARCHAR(255),
+    Phone VARCHAR(15)
+);
+
+-- Appointment Table
+CREATE TABLE Appointment (
+    AppointmentID INT PRIMARY KEY,
+    DoctorID INT,
+    PatientID INT,
+    AppointmentDate DATE,
+    Diagnosis VARCHAR(255),
+    FOREIGN KEY (DoctorID) REFERENCES Doctor(DoctorID),
+    FOREIGN KEY (PatientID) REFERENCES Patient(PatientID)
+);
+
+
+INSERT INTO Doctor  VALUES
+('1','Dr. Meera Sharma', 'Cardiology', '9876543210'),
+('2','Dr. Rajiv Menon', 'Neurology', '9812345678'),
+('3','Dr. Priya Das', 'Orthopedics', '9991122334');
+
+INSERT INTO Patient VALUES
+('1','Arjun Kapoor', 32, 'M', 'Delhi', '9000011111'),
+('2','Neha Singh', 45, 'F', 'Mumbai', '9000022222'),
+('3','Ravi Patel', 29, 'M', 'Ahmedabad', '9000033333'),
+('4','Pooja Nair', 54, 'F', 'Bangalore', '9000044444');
+
+INSERT INTO Appointment VALUES
+(1,1, 1, '2025-10-21', 'High Blood Pressure'),
+(2,2, 2, '2025-10-22', 'Heart Checkup'),
+(3,2, 3, '2025-10-23', 'Migraine'),
+(4,3, 4, '2025-10-24', 'Knee Pain'),
+(5,1, 3, '2025-10-25', 'Chest Pain');
+
+
+SELECT a.AppointmentID,d.Name AS DoctorName,p.Name AS PatientName,a.AppointmentDate,a.Diagnosis
+FROM Appointment a JOIN Doctor d ON a.DoctorID = d.DoctorID JOIN Patient p ON a.PatientID = p.PatientID
+ORDER BY a.AppointmentDate;
+
+SELECT 
+    d.Name AS DoctorName,
+    COUNT(a.PatientID) AS TotalPatients
+FROM Doctor d
+LEFT JOIN Appointment a ON d.DoctorID = a.DoctorID
+GROUP BY d.DoctorID, d.Name;
+
+
+DELIMITER //
+CREATE PROCEDURE AddAppointment (
+    IN p_DoctorID INT,
+    IN p_PatientID INT,
+    IN p_Date DATE,
+    IN p_Diagnosis VARCHAR(255)
+)
+BEGIN
+    INSERT INTO Appointment (DoctorID, PatientID, AppointmentDate, Diagnosis)
+    VALUES (p_DoctorID, p_PatientID, p_Date, p_Diagnosis);
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateAppointment (
+    IN p_AppointmentID INT,
+    IN p_Date DATE,
+    IN p_Diagnosis VARCHAR(255)
+)
+BEGIN
+    UPDATE Appointment
+    SET AppointmentDate = p_Date,
+        Diagnosis = p_Diagnosis
+    WHERE AppointmentID = p_AppointmentID;
+END //
+DELIMITER ;
+
+
+-- library managment!!
+
+CREATE DATABASE LibraryDB;
+USE LibraryDB;
+
+
+CREATE TABLE Book (
+    BookID INT PRIMARY KEY,
+    Title VARCHAR(150) ,
+    Author VARCHAR(100),
+    Genre VARCHAR(50),
+    TotalCopies INT DEFAULT 1,
+    AvailableCopies INT DEFAULT 1
+);
+
+CREATE TABLE Member (
+    MemberID INT PRIMARY KEY,
+    Name VARCHAR(100) ,
+    Email VARCHAR(100),
+    Phone VARCHAR(15)
+);
+
+
+CREATE TABLE IssueRecord (
+    IssueID INT PRIMARY KEY,
+    BookID INT,
+    MemberID INT,
+    IssueDate DATE,
+    ReturnDate DATE,
+    FOREIGN KEY (BookID) REFERENCES Book(BookID),
+    FOREIGN KEY (MemberID) REFERENCES Member(MemberID)
+);
+
+
+INSERT INTO Book  VALUES
+(101, 'The Alchemist', 'Paulo Coelho', 'Fiction', 5, 5),
+(102, 'Atomic Habits', 'James Clear', 'Self-Help', 4, 4),
+(103, 'The Hobbit', 'J.R.R. Tolkien', 'Fantasy', 3, 3),
+(104, 'To Kill a Mockingbird', 'Harper Lee', 'Classic', 2, 2);
+
+INSERT INTO Member  VALUES
+(201, 'Aarav Mehta', 'aarav@gmail.com', '9000011111'),
+(202, 'Sneha Iyer', 'sneha@gmail.com', '9000022222'),
+(203, 'Rahul Singh', 'rahul@gmail.com', '9000033333');
+
+INSERT INTO IssueRecord  VALUES
+(301, 101, 201, '2025-10-01', '2025-10-10'),
+(302, 102, 202, '2025-10-03', NULL),
+(303, 103, 201, '2025-10-05', NULL),
+(304, 104, 203, '2025-10-07', '2025-10-14');
+
+
+SELECT 
+    i.IssueID,
+    b.Title AS BookTitle,
+    m.Name AS MemberName,
+    i.IssueDate,
+    i.ReturnDate
+FROM IssueRecord i
+JOIN Book b ON i.BookID = b.BookID
+JOIN Member m ON i.MemberID = m.MemberID
+ORDER BY i.IssueDate;
+
+SELECT 
+    m.Name AS MemberName,
+    COUNT(i.IssueID) AS TotalIssuedBooks
+FROM Member m
+LEFT JOIN IssueRecord i ON m.MemberID = i.MemberID
+GROUP BY m.MemberID, m.Name;
+
+
+SELECT 
+    i.IssueID,
+    b.Title,
+    m.Name,
+    i.IssueDate
+FROM IssueRecord i
+JOIN Book b ON i.BookID = b.BookID
+JOIN Member m ON i.MemberID = m.MemberID
+WHERE MONTH(i.IssueDate) = MONTH(CURDATE())
+  AND YEAR(i.IssueDate) = YEAR(CURDATE());
+
+SELECT 
+    i.IssueID,
+    b.Title,
+    DATEDIFF(i.ReturnDate, i.IssueDate) AS DaysIssued
+FROM IssueRecord i
+JOIN Book b ON i.BookID = b.BookID
+WHERE i.ReturnDate IS NOT NULL;
+
+DELIMITER //
+CREATE PROCEDURE IssueBook (
+    IN p_IssueID INT,
+    IN p_BookID INT,
+    IN p_MemberID INT,
+    IN p_IssueDate DATE
+)
+BEGIN
+    DECLARE available INT;
+
+    SELECT AvailableCopies INTO available FROM Book WHERE BookID = p_BookID;
+
+    IF available > 0 THEN
+        INSERT INTO IssueRecord (IssueID, BookID, MemberID, IssueDate, ReturnDate)
+        VALUES (p_IssueID, p_BookID, p_MemberID, p_IssueDate, NULL);
+
+        UPDATE Book
+        SET AvailableCopies = AvailableCopies - 1
+        WHERE BookID = p_BookID;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Book not available';
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE ReturnBook (
+    IN p_IssueID INT,
+    IN p_ReturnDate DATE
+)
+BEGIN
+    DECLARE bookid INT;
+
+    SELECT BookID INTO bookid FROM IssueRecord WHERE IssueID = p_IssueID;
+
+    UPDATE IssueRecord
+    SET ReturnDate = p_ReturnDate
+    WHERE IssueID = p_IssueID;
+
+    UPDATE Book
+    SET AvailableCopies = AvailableCopies + 1
+    WHERE BookID = bookid;
+END //
+DELIMITER ;
+
+-- Employee system!
+
+CREATE DATABASE PayrollDB;
+USE PayrollDB;
+
+CREATE TABLE Department (
+    DeptID INT PRIMARY KEY,
+    DeptName VARCHAR(100) NOT NULL,
+    Location VARCHAR(100)
+);
+
+CREATE TABLE Employee (
+    EmpID INT PRIMARY KEY,
+    EmpName VARCHAR(100) NOT NULL,
+    Gender CHAR(1),
+    DeptID INT,
+    JoinDate DATE,
+    FOREIGN KEY (DeptID) REFERENCES Department(DeptID)
+);
+
+CREATE TABLE Salary (
+    SalaryID INT PRIMARY KEY,
+    EmpID INT,
+    BasicPay DECIMAL(10,2),
+    HRA DECIMAL(10,2),
+    DA DECIMAL(10,2),
+    Deductions DECIMAL(10,2),
+    NetPay DECIMAL(10,2),
+    FOREIGN KEY (EmpID) REFERENCES Employee(EmpID)
+);
+
+INSERT INTO Department  VALUES
+(101, 'HR', 'Delhi'),
+(102, 'IT', 'Bangalore'),
+(103, 'Finance', 'Mumbai');
+
+INSERT INTO Employee  VALUES
+(201, 'Aarav Mehta', 'M', 102, '2022-04-10'),
+(202, 'Sneha Iyer', 'F', 101, '2021-03-15'),
+(203, 'Rahul Singh', 'M', 103, '2020-06-25'),
+(204, 'Priya Das', 'F', 102, '2023-01-20');
+
+INSERT INTO Salary  VALUES
+(301, 201, 50000, 10000, 5000, 2000, 63000),
+(302, 202, 40000, 8000, 4000, 1500, 50500),
+(303, 203, 55000, 11000, 5500, 2500, 69000),
+(304, 204, 48000, 9000, 4800, 1800, 60000);
+
+SELECT 
+    e.EmpID,
+    e.EmpName,
+    d.DeptName,
+    d.Location,
+    s.BasicPay,
+    s.HRA,
+    s.DA,
+    s.Deductions,
+    s.NetPay
+FROM Employee e
+JOIN Department d ON e.DeptID = d.DeptID
+JOIN Salary s ON e.EmpID = s.EmpID
+ORDER BY d.DeptName;
+
+SELECT 
+    d.DeptName,
+    SUM(s.NetPay) AS TotalExpense
+FROM Department d
+JOIN Employee e ON d.DeptID = e.DeptID
+JOIN Salary s ON e.EmpID = s.EmpID
+GROUP BY d.DeptName;
+
+SELECT 
+    d.DeptName,
+    AVG(s.NetPay) AS AvgSalary
+FROM Department d
+JOIN Employee e ON d.DeptID = e.DeptID
+JOIN Salary s ON e.EmpID = s.EmpID
+GROUP BY d.DeptName;
+
+
+DELIMITER //
+CREATE PROCEDURE AddSalary (
+    IN p_SalaryID INT,
+    IN p_EmpID INT,
+    IN p_BasicPay DECIMAL(10,2),
+    IN p_HRA DECIMAL(10,2),
+    IN p_DA DECIMAL(10,2),
+    IN p_Deductions DECIMAL(10,2)
+)
+BEGIN
+    DECLARE net DECIMAL(10,2);
+    SET net = p_BasicPay + p_HRA + p_DA - p_Deductions;
+    
+    INSERT INTO Salary (SalaryID, EmpID, BasicPay, HRA, DA, Deductions, NetPay)
+    VALUES (p_SalaryID, p_EmpID, p_BasicPay, p_HRA, p_DA, p_Deductions, net);
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateSalary (
+    IN p_EmpID INT,
+    IN p_BasicPay DECIMAL(10,2),
+    IN p_HRA DECIMAL(10,2),
+    IN p_DA DECIMAL(10,2),
+    IN p_Deductions DECIMAL(10,2)
+)
+BEGIN
+    DECLARE net DECIMAL(10,2);
+    SET net = p_BasicPay + p_HRA + p_DA - p_Deductions;
+
+    UPDATE Salary
+    SET BasicPay = p_BasicPay,
+        HRA = p_HRA,
+        DA = p_DA,
+        Deductions = p_Deductions,
+        NetPay = net
+    WHERE EmpID = p_EmpID;
+END //
+DELIMITER ;
+
+-- Ecommerce!
+
+CREATE DATABASE ECommerceDB;
+USE ECommerceDB;
+
+CREATE TABLE Customer (
+    CustID INT PRIMARY KEY,
+    CustName VARCHAR(100),
+    Email VARCHAR(100),
+    City VARCHAR(50)
+);
+
+
+CREATE TABLE Product (
+    ProdID INT PRIMARY KEY,
+    ProdName VARCHAR(100) ,
+    Price DECIMAL(10,2),
+    Stock INT
+);
+
+CREATE TABLE Orders (
+    OrderID INT PRIMARY KEY,
+    CustID INT,
+    ProdID INT,
+    Quantity INT,
+    OrderDate DATE,
+    FOREIGN KEY (CustID) REFERENCES Customer(CustID),
+    FOREIGN KEY (ProdID) REFERENCES Product(ProdID)
+);
+
+INSERT INTO Customer (CustID, CustName, Email, City) VALUES
+(101, 'Aarav Mehta', 'aarav@gmail.com', 'Delhi'),
+(102, 'Sneha Iyer', 'sneha@gmail.com', 'Bangalore'),
+(103, 'Rahul Singh', 'rahul@gmail.com', 'Mumbai');
+
+INSERT INTO Product (ProdID, ProdName, Price, Stock) VALUES
+(201, 'Wireless Mouse', 1200.00, 50),
+(202, 'Mechanical Keyboard', 3500.00, 40),
+(203, 'Laptop Stand', 900.00, 60),
+(204, 'USB-C Hub', 1500.00, 30);
+
+INSERT INTO Orders (OrderID, CustID, ProdID, Quantity, OrderDate) VALUES
+(301, 101, 201, 2, '2025-10-01'),
+(302, 102, 202, 1, '2025-10-02'),
+(303, 101, 203, 3, '2025-10-03'),
+(304, 103, 201, 1, '2025-10-04'),
+(305, 102, 203, 2, '2025-10-05'),
+(306, 103, 204, 1, '2025-10-06');
+
+SELECT 
+    o.OrderID,
+    c.CustName,
+    p.ProdName,
+    o.Quantity,
+    o.OrderDate,
+    (o.Quantity * p.Price) AS TotalAmount
+FROM Orders o
+JOIN Customer c ON o.CustID = c.CustID
+JOIN Product p ON o.ProdID = p.ProdID
+ORDER BY o.OrderDate;
+
+SELECT 
+    p.ProdName,
+    SUM(o.Quantity * p.Price) AS TotalSales
+FROM Product p
+JOIN Orders o ON p.ProdID = o.ProdID
+GROUP BY p.ProdName;
+
+SELECT 
+    p.ProdName,
+    SUM(o.Quantity) AS TotalQuantity
+FROM Product p
+JOIN Orders o ON p.ProdID = o.ProdID
+GROUP BY p.ProdName
+ORDER BY TotalQuantity DESC
+LIMIT 1;
+
+SELECT 
+    c.CustName,
+    COUNT(o.OrderID) AS TotalOrders
+FROM Customer c
+LEFT JOIN Orders o ON c.CustID = o.CustID
+GROUP BY c.CustName;
+
+DELIMITER //
+CREATE PROCEDURE UpdateProductStock (
+    IN p_ProdID INT,
+    IN p_Quantity INT
+)
+BEGIN
+    DECLARE available INT;
+
+    SELECT Stock INTO available FROM Product WHERE ProdID = p_ProdID;
+
+    IF available >= p_Quantity THEN
+        UPDATE Product
+        SET Stock = Stock - p_Quantity
+        WHERE ProdID = p_ProdID;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Not enough stock available';
+    END IF;
+END //
+DELIMITER ;
+
+-- school!
+
+CREATE DATABASE SchoolDB;
+USE SchoolDB;
+
+CREATE TABLE Class (
+    ClassID INT PRIMARY KEY,
+    ClassName VARCHAR(50) NOT NULL,
+    ClassTeacher VARCHAR(100)
+);
+
+CREATE TABLE Student (
+    StudentID INT PRIMARY KEY,
+    StudentName VARCHAR(100) NOT NULL,
+    ClassID INT,
+    FOREIGN KEY (ClassID) REFERENCES Class(ClassID)
+);
+
+CREATE TABLE Marks (
+    MarkID INT PRIMARY KEY,
+    StudentID INT,
+    Subject VARCHAR(50),
+    MarksObtained INT,
+    FOREIGN KEY (StudentID) REFERENCES Student(StudentID)
+);
+
+INSERT INTO Class (ClassID, ClassName, ClassTeacher) VALUES
+(1, 'Class 10A', 'Mrs. Sharma'),
+(2, 'Class 10B', 'Mr. Rajan');
+
+INSERT INTO Student (StudentID, StudentName, ClassID) VALUES
+(101, 'Aarav Mehta', 1),
+(102, 'Sneha Iyer', 1),
+(103, 'Rahul Singh', 2),
+(104, 'Priya Verma', 2);
+
+INSERT INTO Marks (MarkID, StudentID, Subject, MarksObtained) VALUES
+(201, 101, 'Math', 88),
+(202, 101, 'Science', 92),
+(203, 102, 'Math', 76),
+(204, 102, 'Science', 81),
+(205, 103, 'Math', 90),
+(206, 103, 'Science', 85),
+(207, 104, 'Math', 78),
+(208, 104, 'Science', 80);
+
+SELECT 
+    c.ClassName,
+    s.StudentName,
+    m.Subject,
+    m.MarksObtained
+FROM Class c
+JOIN Student s ON c.ClassID = s.ClassID
+JOIN Marks m ON s.StudentID = m.StudentID
+ORDER BY c.ClassName, s.StudentName;
+
+SELECT 
+    c.ClassName,
+    AVG(m.MarksObtained) AS AvgMarks
+FROM Class c
+JOIN Student s ON c.ClassID = s.ClassID
+JOIN Marks m ON s.StudentID = m.StudentID
+GROUP BY c.ClassName;
+
+DELIMITER //
+CREATE PROCEDURE InsertStudent (
+    IN p_StudentID INT,
+    IN p_StudentName VARCHAR(100),
+    IN p_ClassID INT
+)
+BEGIN
+    INSERT INTO Student (StudentID, StudentName, ClassID)
+    VALUES (p_StudentID, p_StudentName, p_ClassID);
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateMarks (
+    IN p_StudentID INT,
+    IN p_Subject VARCHAR(50),
+    IN p_NewMarks INT
+)
+BEGIN
+    UPDATE Marks
+    SET MarksObtained = p_NewMarks
+    WHERE StudentID = p_StudentID AND Subject = p_Subject;
+END //
+DELIMITER ;
+
+-- Banking!!
+
+CREATE DATABASE BankDB;
+USE BankDB;
+
+CREATE TABLE Customer (
+    CustomerID INT PRIMARY KEY,
+    CustomerName VARCHAR(100) NOT NULL,
+    PhoneNumber VARCHAR(15),
+    City VARCHAR(50)
+);
+
+CREATE TABLE Account (
+    AccountID INT PRIMARY KEY,
+    CustomerID INT,
+    AccountType VARCHAR(20),
+    Balance DECIMAL(12,2),
+    FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID)
+);
+
+CREATE TABLE TransactionTable (
+    TransactionID INT PRIMARY KEY,
+    AccountID INT,
+    TransactionDate DATE,
+    TransactionType VARCHAR(10), -- 'Deposit' or 'Withdraw'
+    Amount DECIMAL(12,2),
+    FOREIGN KEY (AccountID) REFERENCES Account(AccountID)
+);
+
+INSERT INTO Customer (CustomerID, CustomerName, PhoneNumber, City) VALUES
+(1, 'Aarav Sharma', '9876543210', 'Delhi'),
+(2, 'Sneha Iyer', '9823456789', 'Mumbai'),
+(3, 'Rahul Verma', '9811122233', 'Bangalore');
+
+INSERT INTO Account (AccountID, CustomerID, AccountType, Balance) VALUES
+(101, 1, 'Savings', 50000.00),
+(102, 2, 'Current', 75000.00),
+(103, 3, 'Savings', 60000.00);
+
+INSERT INTO TransactionTable (TransactionID, AccountID, TransactionDate, TransactionType, Amount) VALUES
+(201, 101, '2025-10-01', 'Deposit', 10000.00),
+(202, 101, '2025-10-05', 'Withdraw', 2000.00),
+(203, 102, '2025-10-03', 'Deposit', 15000.00),
+(204, 103, '2025-10-04', 'Withdraw', 5000.00),
+(205, 103, '2025-10-10', 'Deposit', 8000.00);
+
+SELECT 
+    c.CustomerName,
+    c.City,
+    a.AccountID,
+    a.AccountType,
+    a.Balance
+FROM Customer c
+JOIN Account a ON c.CustomerID = a.CustomerID;
+
+SELECT 
+    a.AccountID,
+    c.CustomerName,
+    SUM(t.Amount) AS TotalAmount
+FROM TransactionTable t
+JOIN Account a ON t.AccountID = a.AccountID
+JOIN Customer c ON a.CustomerID = c.CustomerID
+GROUP BY a.AccountID, c.CustomerName;
+
+SELECT 
+    AccountID,
+    MAX(Amount) AS MaxTransaction,
+    MIN(Amount) AS MinTransaction
+FROM TransactionTable
+GROUP BY AccountID;
+
+SELECT 
+    AccountID,
+    SUM(Amount) AS TotalDeposits
+FROM TransactionTable
+WHERE TransactionType = 'Deposit'
+  AND MONTH(TransactionDate) = 10
+  AND YEAR(TransactionDate) = 2025
+GROUP BY AccountID;
+
+DELIMITER //
+CREATE PROCEDURE InsertTransaction (
+    IN p_TransactionID INT,
+    IN p_AccountID INT,
+    IN p_Date DATE,
+    IN p_Type VARCHAR(10),
+    IN p_Amount DECIMAL(12,2)
+)
+BEGIN
+    INSERT INTO TransactionTable (TransactionID, AccountID, TransactionDate, TransactionType, Amount)
+    VALUES (p_TransactionID, p_AccountID, p_Date, p_Type, p_Amount);
+
+    IF p_Type = 'Deposit' THEN
+        UPDATE Account
+        SET Balance = Balance + p_Amount
+        WHERE AccountID = p_AccountID;
+    ELSEIF p_Type = 'Withdraw' THEN
+        UPDATE Account
+        SET Balance = Balance - p_Amount
+        WHERE AccountID = p_AccountID;
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateTransactionAmount (
+    IN p_TransactionID INT,
+    IN p_NewAmount DECIMAL(12,2)
+)
+BEGIN
+    UPDATE TransactionTable
+    SET Amount = p_NewAmount
+    WHERE TransactionID = p_TransactionID;
+END //
+DELIMITER ;
+
+--  FLight!!
+CREATE DATABASE FlightDB;
+USE FlightDB;
+
+CREATE TABLE Passenger (
+    PassengerID INT PRIMARY KEY,
+    PassengerName VARCHAR(100) NOT NULL,
+    Gender VARCHAR(10),
+    City VARCHAR(50)
+);
+
+CREATE TABLE Flight (
+    FlightID INT PRIMARY KEY,
+    FlightNumber VARCHAR(10) NOT NULL,
+    Source VARCHAR(50),
+    Destination VARCHAR(50),
+    DepartureDate DATE,
+    AvailableSeats INT
+);
+
+CREATE TABLE Booking (
+    BookingID INT PRIMARY KEY,
+    PassengerID INT,
+    FlightID INT,
+    BookingDate DATE,
+    SeatNumber VARCHAR(10),
+    FOREIGN KEY (PassengerID) REFERENCES Passenger(PassengerID),
+    FOREIGN KEY (FlightID) REFERENCES Flight(FlightID)
+);
+
+INSERT INTO Passenger (PassengerID, PassengerName, Gender, City) VALUES
+(1, 'Aarav Sharma', 'Male', 'Delhi'),
+(2, 'Sneha Iyer', 'Female', 'Mumbai'),
+(3, 'Rahul Mehta', 'Male', 'Chennai'),
+(4, 'Priya Singh', 'Female', 'Bangalore');
+
+INSERT INTO Flight (FlightID, FlightNumber, Source, Destination, DepartureDate, AvailableSeats) VALUES
+(101, 'AI202', 'Delhi', 'Mumbai', '2025-10-30', 120),
+(102, 'IN305', 'Bangalore', 'Chennai', '2025-10-31', 90),
+(103, 'SJ404', 'Mumbai', 'Delhi', '2025-11-01', 150);
+
+INSERT INTO Booking (BookingID, PassengerID, FlightID, BookingDate, SeatNumber) VALUES
+(201, 1, 101, '2025-10-20', '12A'),
+(202, 2, 101, '2025-10-21', '12B'),
+(203, 3, 102, '2025-10-22', '14C'),
+(204, 4, 103, '2025-10-23', '15A'),
+(205, 1, 103, '2025-10-24', '16B');
+
+SELECT 
+    p.PassengerName,
+    f.FlightNumber,
+    f.Source,
+    f.Destination,
+    f.DepartureDate,
+    b.SeatNumber
+FROM Passenger p
+JOIN Booking b ON p.PassengerID = b.PassengerID
+JOIN Flight f ON b.FlightID = f.FlightID
+ORDER BY f.DepartureDate;
+
+SELECT 
+    f.FlightNumber,
+    f.Source,
+    f.Destination,
+    COUNT(b.PassengerID) AS TotalPassengers
+FROM Flight f
+LEFT JOIN Booking b ON f.FlightID = b.FlightID
+GROUP BY f.FlightNumber, f.Source, f.Destination;
+
+DELIMITER //
+CREATE PROCEDURE InsertBooking (
+    IN p_BookingID INT,
+    IN p_PassengerID INT,
+    IN p_FlightID INT,
+    IN p_BookingDate DATE,
+    IN p_SeatNumber VARCHAR(10)
+)
+BEGIN
+    INSERT INTO Booking (BookingID, PassengerID, FlightID, BookingDate, SeatNumber)
+    VALUES (p_BookingID, p_PassengerID, p_FlightID, p_BookingDate, p_SeatNumber);
+
+    UPDATE Flight
+    SET AvailableSeats = AvailableSeats - 1
+    WHERE FlightID = p_FlightID;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateBookingSeat (
+    IN p_BookingID INT,
+    IN p_NewSeat VARCHAR(10)
+)
+BEGIN
+    UPDATE Booking
+    SET SeatNumber = p_NewSeat
+    WHERE BookingID = p_BookingID;
+END //
+DELIMITER ;
+
+
+--  Hotel managment!!
+
+CREATE DATABASE HotelDB;
+USE HotelDB;
+
+CREATE TABLE Guest (
+    GuestID INT PRIMARY KEY,
+    GuestName VARCHAR(100) ,
+    PhoneNumber VARCHAR(15),
+    City VARCHAR(50)
+);
+
+-- Room Table
+CREATE TABLE Room (
+    RoomID INT PRIMARY KEY,
+    RoomType VARCHAR(50),
+    PricePerNight DECIMAL(10,2),
+    Status VARCHAR(20)  
+);
+
+CREATE TABLE Booking (
+    BookingID INT PRIMARY KEY,
+    GuestID INT,
+    RoomID INT,
+    CheckIn DATE,
+    CheckOut DATE,
+    TotalAmount DECIMAL(10,2),
+    FOREIGN KEY (GuestID) REFERENCES Guest(GuestID),
+    FOREIGN KEY (RoomID) REFERENCES Room(RoomID)
+);
+
+INSERT INTO Guest (GuestID, GuestName, PhoneNumber, City) VALUES
+(1, 'Aarav Sharma', '9876543210', 'Delhi'),
+(2, 'Sneha Iyer', '9823456789', 'Mumbai'),
+(3, 'Rahul Verma', '9811122233', 'Chennai');
+
+
+INSERT INTO Room (RoomID, RoomType, PricePerNight, Status) VALUES
+(101, 'Deluxe', 3500.00, 'Available'),
+(102, 'Suite', 5500.00, 'Available'),
+(103, 'Standard', 2500.00, 'Available'),
+(104, 'Deluxe', 3500.00, 'Available');
+
+
+INSERT INTO Booking (BookingID, GuestID, RoomID, CheckIn, CheckOut, TotalAmount) VALUES
+(201, 1, 101, '2025-10-20', '2025-10-23', 10500.00),
+(202, 2, 102, '2025-10-22', '2025-10-25', 16500.00),
+(203, 3, 103, '2025-10-24', '2025-10-26', 5000.00);
+
+SELECT 
+    g.GuestName,
+    r.RoomType,
+    r.PricePerNight,
+    b.CheckIn,
+    b.CheckOut,
+    b.TotalAmount
+FROM Guest g
+JOIN Booking b ON g.GuestID = b.GuestID
+JOIN Room r ON b.RoomID = r.RoomID
+ORDER BY b.CheckIn;
+
+SELECT 
+    b.BookingID,
+    g.GuestName,
+    DATEDIFF(b.CheckOut, b.CheckIn) AS StayDuration,
+    b.TotalAmount
+FROM Booking b
+JOIN Guest g ON b.GuestID = g.GuestID;
+
+SELECT 
+    r.RoomType,
+    SUM(b.TotalAmount) AS TotalRevenue
+FROM Room r
+JOIN Booking b ON r.RoomID = b.RoomID
+GROUP BY r.RoomType;
+
+DELIMITER //
+CREATE PROCEDURE InsertBooking (
+    IN p_BookingID INT,
+    IN p_GuestID INT,
+    IN p_RoomID INT,
+    IN p_CheckIn DATE,
+    IN p_CheckOut DATE
+)
+BEGIN
+    DECLARE v_Price DECIMAL(10,2);
+    DECLARE v_Days INT;
+    DECLARE v_Total DECIMAL(10,2);
+
+    SELECT PricePerNight INTO v_Price FROM Room WHERE RoomID = p_RoomID;
+
+    SET v_Days = DATEDIFF(p_CheckOut, p_CheckIn);
+
+    SET v_Total = v_Price * v_Days;
+
+    INSERT INTO Booking (BookingID, GuestID, RoomID, CheckIn, CheckOut, TotalAmount)
+    VALUES (p_BookingID, p_GuestID, p_RoomID, p_CheckIn, p_CheckOut, v_Total);
+
+    UPDATE Room
+    SET Status = 'Booked'
+    WHERE RoomID = p_RoomID;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateBookingDates (
+    IN p_BookingID INT,
+    IN p_NewCheckIn DATE,
+    IN p_NewCheckOut DATE
+)
+BEGIN
+    DECLARE v_RoomID INT;
+    DECLARE v_Price DECIMAL(10,2);
+    DECLARE v_Days INT;
+    DECLARE v_Total DECIMAL(10,2);
+
+    SELECT RoomID INTO v_RoomID FROM Booking WHERE BookingID = p_BookingID;
+    SELECT PricePerNight INTO v_Price FROM Room WHERE RoomID = v_RoomID;
+
+    SET v_Days = DATEDIFF(p_NewCheckOut, p_NewCheckIn);
+    SET v_Total = v_Price * v_Days;
+
+    UPDATE Booking
+    SET CheckIn = p_NewCheckIn,
+        CheckOut = p_NewCheckOut,
+        TotalAmount = v_Total
+    WHERE BookingID = p_BookingID;
+END //
+DELIMITER ;
+
+-- Inventory!!
+
+CREATE DATABASE InventoryDB;
+USE InventoryDB;
+
+CREATE TABLE Supplier (
+    SupplierID INT PRIMARY KEY,
+    SupplierName VARCHAR(100) ,
+    ContactNumber VARCHAR(15),
+    City VARCHAR(50)
+);
+
+CREATE TABLE Product (
+    ProductID INT PRIMARY KEY,
+    ProductName VARCHAR(100) ,
+    Category VARCHAR(50),
+    UnitPrice DECIMAL(10,2)
+);
+
+CREATE TABLE SupplyOrder (
+    OrderID INT PRIMARY KEY,
+    SupplierID INT,
+    ProductID INT,
+    OrderDate DATE,
+    Quantity INT,
+    FOREIGN KEY (SupplierID) REFERENCES Supplier(SupplierID),
+    FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
+);
+
+INSERT INTO Supplier (SupplierID, SupplierName, ContactNumber, City) VALUES
+(1, 'Global Supplies', '9876543210', 'Delhi'),
+(2, 'Metro Traders', '9811122233', 'Mumbai'),
+(3, 'Ace Distributors', '9823456789', 'Chennai');
+
+INSERT INTO Product (ProductID, ProductName, Category, UnitPrice) VALUES
+(101, 'Laptop', 'Electronics', 55000.00),
+(102, 'Mouse', 'Accessories', 500.00),
+(103, 'Keyboard', 'Accessories', 1200.00),
+(104, 'Monitor', 'Electronics', 9000.00);
+
+INSERT INTO SupplyOrder (OrderID, SupplierID, ProductID, OrderDate, Quantity) VALUES
+(201, 1, 101, '2025-10-10', 10),
+(202, 1, 102, '2025-10-12', 50),
+(203, 2, 103, '2025-10-13', 30),
+(204, 3, 104, '2025-10-14', 20),
+(205, 2, 101, '2025-10-15', 5);
+
+SELECT 
+    s.SupplierName,
+    p.ProductName,
+    so.OrderDate,
+    so.Quantity,
+    (p.UnitPrice * so.Quantity) AS TotalAmount
+FROM SupplyOrder so
+JOIN Supplier s ON so.SupplierID = s.SupplierID
+JOIN Product p ON so.ProductID = p.ProductID
+ORDER BY s.SupplierName;
+
+SELECT 
+    s.SupplierName,
+    SUM(so.Quantity) AS TotalQuantitySupplied
+FROM Supplier s
+JOIN SupplyOrder so ON s.SupplierID = so.SupplierID
+GROUP BY s.SupplierName;
+
+SELECT 
+    s.SupplierName,
+    SUM(p.UnitPrice * so.Quantity) AS TotalRevenue
+FROM Supplier s
+JOIN SupplyOrder so ON s.SupplierID = so.SupplierID
+JOIN Product p ON so.ProductID = p.ProductID
+GROUP BY s.SupplierName;
+
+SELECT 
+    MONTHNAME(OrderDate) AS Month,
+    SUM(Quantity) AS TotalQuantity
+FROM SupplyOrder
+WHERE YEAR(OrderDate) = 2025 AND MONTH(OrderDate) = 10
+GROUP BY MONTHNAME(OrderDate);
+
+DELIMITER //
+CREATE PROCEDURE InsertSupplyOrder (
+    IN p_OrderID INT,
+    IN p_SupplierID INT,
+    IN p_ProductID INT,
+    IN p_OrderDate DATE,
+    IN p_Quantity INT
+)
+BEGIN
+    INSERT INTO SupplyOrder (OrderID, SupplierID, ProductID, OrderDate, Quantity)
+    VALUES (p_OrderID, p_SupplierID, p_ProductID, p_OrderDate, p_Quantity);
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateSupplyQuantity (
+    IN p_OrderID INT,
+    IN p_NewQuantity INT
+)
+BEGIN
+    UPDATE SupplyOrder
+    SET Quantity = p_NewQuantity
+    WHERE OrderID = p_OrderID;
+END //
+DELIMITER ;
+
+
+-- cinema ticket 
+
+CREATE DATABASE CinemaDB;
+USE CinemaDB;
+
+CREATE TABLE Customer (
+    CustomerID INT PRIMARY KEY,
+    CustomerName VARCHAR(100) NOT NULL,
+    Email VARCHAR(100),
+    PhoneNumber VARCHAR(15)
+);
+
+CREATE TABLE Movie (
+    MovieID INT PRIMARY KEY,
+    MovieName VARCHAR(100) NOT NULL,
+    Genre VARCHAR(50),
+    DurationMinutes INT
+);
+
+CREATE TABLE ShowTable (
+    ShowID INT PRIMARY KEY,
+    MovieID INT,
+    ShowDate DATE,
+    ShowTime TIME,
+    TotalSeats INT,
+    FOREIGN KEY (MovieID) REFERENCES Movie(MovieID)
+);
+
+CREATE TABLE Booking (
+    BookingID INT PRIMARY KEY,
+    CustomerID INT,
+    ShowID INT,
+    BookingDate DATE,
+    TicketsBooked INT,
+    FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID),
+    FOREIGN KEY (ShowID) REFERENCES ShowTable(ShowID)
+);
+
+INSERT INTO Customer (CustomerID, CustomerName, Email, PhoneNumber) VALUES
+(1, 'Aarav Sharma', 'aarav@gmail.com', '9876543210'),
+(2, 'Sneha Iyer', 'sneha@gmail.com', '9811122233'),
+(3, 'Rahul Mehta', 'rahul@gmail.com', '9823456789');
+
+INSERT INTO Movie (MovieID, MovieName, Genre, DurationMinutes) VALUES
+(101, 'Avatar 3', 'Sci-Fi', 180),
+(102, 'The Batman', 'Action', 150),
+(103, 'Inception', 'Thriller', 160);
+
+INSERT INTO ShowTable (ShowID, MovieID, ShowDate, ShowTime, TotalSeats) VALUES
+(201, 101, '2025-11-01', '18:00:00', 100),
+(202, 101, '2025-11-01', '21:00:00', 100),
+(203, 102, '2025-11-02', '19:00:00', 80),
+(204, 103, '2025-11-03', '20:00:00', 90);
+
+INSERT INTO Booking (BookingID, CustomerID, ShowID, BookingDate, TicketsBooked) VALUES
+(301, 1, 201, '2025-10-20', 2),
+(302, 2, 201, '2025-10-21', 3),
+(303, 3, 203, '2025-10-22', 1),
+(304, 1, 204, '2025-10-23', 2);
+
+SELECT 
+    c.CustomerName,
+    m.MovieName,
+    m.Genre,
+    s.ShowDate,
+    s.ShowTime,
+    b.TicketsBooked
+FROM Booking b
+JOIN Customer c ON b.CustomerID = c.CustomerID
+JOIN ShowTable s ON b.ShowID = s.ShowID
+JOIN Movie m ON s.MovieID = m.MovieID
+ORDER BY s.ShowDate, s.ShowTime;
+
+SELECT 
+    m.MovieName,
+    SUM(b.TicketsBooked) AS TotalTickets
+FROM Booking b
+JOIN ShowTable s ON b.ShowID = s.ShowID
+JOIN Movie m ON s.MovieID = m.MovieID
+GROUP BY m.MovieName;
+
+SELECT MAX(TicketsBooked) AS MaxTicketsInBooking FROM Booking;
+
+SELECT 
+    ShowDate,
+    SUM(TicketsBooked) AS TotalTickets
+FROM Booking b
+JOIN ShowTable s ON b.ShowID = s.ShowID
+GROUP BY ShowDate;
+
+DELIMITER //
+CREATE PROCEDURE InsertBooking (
+    IN p_BookingID INT,
+    IN p_CustomerID INT,
+    IN p_ShowID INT,
+    IN p_BookingDate DATE,
+    IN p_TicketsBooked INT
+)
+BEGIN
+    INSERT INTO Booking (BookingID, CustomerID, ShowID, BookingDate, TicketsBooked)
+    VALUES (p_BookingID, p_CustomerID, p_ShowID, p_BookingDate, p_TicketsBooked);
+
+    UPDATE ShowTable
+    SET TotalSeats = TotalSeats - p_TicketsBooked
+    WHERE ShowID = p_ShowID;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE UpdateBooking (
+    IN p_BookingID INT,
+    IN p_NewTickets INT
+)
+BEGIN
+    DECLARE oldTickets INT;
+
+    SELECT TicketsBooked INTO oldTickets FROM Booking WHERE BookingID = p_BookingID;
+
+    UPDATE Booking
+    SET TicketsBooked = p_NewTickets
+    WHERE BookingID = p_BookingID;
+
+    UPDATE ShowTable
+    SET TotalSeats = TotalSeats + oldTickets - p_NewTickets
+    WHERE ShowID = (SELECT ShowID FROM Booking WHERE BookingID = p_BookingID);
+END //
+DELIMITER ;
